@@ -22,41 +22,17 @@ class DocumentVerifyController extends Controller
             ], 400);
         }
 
-        // 1. Search by signature_hash (QR tanda tangan)
+        // 1. Search strictly by signature_hash (QR tanda tangan resmi)
         $signatureRecord = DocumentSignature::with('document.signatures')
             ->where('signature_hash', $hash)
             ->first();
 
-        $document = null;
-
-        if ($signatureRecord) {
-            $document = $signatureRecord->document;
-        } else {
-            // 2. Fallback: nomor surat (QR pada berkas pemohon)
-            $document = Document::with('signatures')
-                ->where('document_number', $hash)
-                ->first();
-
-            if ($document) {
-                $signatureRecord = $document->signatures->first() ?? new DocumentSignature([
-                    'document_id' => $document->id,
-                    'signature_hash' => $document->document_number,
-                    'original_data' => '',
-                    'signature' => 'MOCK_SIGNATURE_' . $document->document_number,
-                    'data_hash' => null,
-                    'public_key' => '',
-                    'signer_name' => 'Sistem / Pemohon',
-                    'signer_role' => 'Pemohon',
-                    'status' => 'approved',
-                    'signed_at' => $document->created_at
-                ]);
-            }
-        }
+        $document = $signatureRecord ? $signatureRecord->document : null;
 
         if (!$document || !$signatureRecord) {
             return response()->json([
                 'is_valid' => false,
-                'message' => 'Dokumen tidak terdaftar atau tanda tangan tidak valid.'
+                'message' => 'Tanda tangan digital / Kode QR tidak terdaftar atau tidak valid. Verifikasi wajib menggunakan Kode QR pada surat.'
             ], 404);
         }
 

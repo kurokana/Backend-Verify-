@@ -11,7 +11,8 @@ class Document extends Model
     protected $guarded = [];
 
     protected $casts = [
-        'content' => 'array',
+        'content'   => 'array',
+        'synced_at' => 'datetime',
     ];
 
     public function signatures(): HasMany
