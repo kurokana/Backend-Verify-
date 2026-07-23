@@ -86,7 +86,7 @@ class DocumentRetrieveController extends Controller
             $verificationStatus = 'VALID';
             $verificationDetail = 'docstore_verified';
             $isValid = true;
-        } elseif ($docStatusLower === 'rejected') {
+        } elseif (in_array($docStatusLower, ['rejected', 'ditolak', 'tidak disetujui'])) {
             $verificationStatus = 'DITOLAK';
             $verificationDetail = 'docstore_rejected';
             $isValid = false;

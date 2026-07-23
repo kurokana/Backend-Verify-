@@ -36,35 +36,73 @@ class DocumentVerifyController extends Controller
             ], 404);
         }
 
-        if ($document->status !== 'approved') {
+        $docStatusLower = strtolower($document->status ?? '');
+        $isRejected = in_array($docStatusLower, ['rejected', 'ditolak', 'tidak disetujui']);
+
+        if ($isRejected) {
             $allSignatures = $document->signatures->map(function ($sig) use ($hash) {
                 return [
-                    'signer_name' => $sig->signer_name,
-                    'signer_role' => $sig->signer_role,
-                    'status' => $sig->status,
-                    'signed_at' => $sig->signed_at ? $sig->signed_at->toIso8601String() : null,
-                    'signature_hash' => $sig->signature_hash,
+                    'signer_name'        => $sig->signer_name,
+                    'signer_role'        => $sig->signer_role,
+                    'status'             => $sig->status,
+                    'signed_at'          => $sig->signed_at ? $sig->signed_at->toIso8601String() : null,
+                    'signature_hash'     => $sig->signature_hash,
                     'is_current_scanned' => $sig->signature_hash === $hash
                 ];
             });
 
             return response()->json([
-                'is_valid' => false,
+                'is_valid'            => false,
+                'verification_status' => 'DITOLAK',
+                'verification_detail' => 'docstore_rejected',
+                'cryptographic_error' => 'Dokumen ini telah ditolak dan tidak berlaku.',
+                'document' => [
+                    'id'      => $document->document_id,
+                    'type'    => $document->document_type,
+                    'number'  => $document->document_number,
+                    'status'  => $document->status,
+                    'content' => $document->content,
+                ],
+                'scanned_signature' => [
+                    'signer_name'    => $signatureRecord->signer_name,
+                    'signer_role'    => $signatureRecord->signer_role,
+                    'status'         => $signatureRecord->status,
+                    'signed_at'      => $signatureRecord->signed_at ? $signatureRecord->signed_at->toIso8601String() : null,
+                    'signature_hash' => $signatureRecord->signature_hash
+                ],
+                'all_signatures' => $allSignatures
+            ], 200)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        if (!in_array($docStatusLower, ['approved', 'manual', 'approved manual', 'disetujui manual'])) {
+            $allSignatures = $document->signatures->map(function ($sig) use ($hash) {
+                return [
+                    'signer_name'        => $sig->signer_name,
+                    'signer_role'        => $sig->signer_role,
+                    'status'             => $sig->status,
+                    'signed_at'          => $sig->signed_at ? $sig->signed_at->toIso8601String() : null,
+                    'signature_hash'     => $sig->signature_hash,
+                    'is_current_scanned' => $sig->signature_hash === $hash
+                ];
+            });
+
+            return response()->json([
+                'is_valid'            => false,
                 'verification_status' => 'PROSES',
                 'verification_detail' => 'in_process',
                 'cryptographic_error' => 'Dokumen masih dalam proses persetujuan.',
                 'document' => [
-                    'id' => $document->document_id,
-                    'type' => $document->document_type,
-                    'number' => $document->document_number,
-                    'status' => $document->status,
+                    'id'      => $document->document_id,
+                    'type'    => $document->document_type,
+                    'number'  => $document->document_number,
+                    'status'  => $document->status,
                     'content' => $document->content,
                 ],
                 'scanned_signature' => [
-                    'signer_name' => $signatureRecord->signer_name,
-                    'signer_role' => $signatureRecord->signer_role,
-                    'status' => $signatureRecord->status,
-                    'signed_at' => $signatureRecord->signed_at ? $signatureRecord->signed_at->toIso8601String() : null,
+                    'signer_name'    => $signatureRecord->signer_name,
+                    'signer_role'    => $signatureRecord->signer_role,
+                    'status'         => $signatureRecord->status,
+                    'signed_at'      => $signatureRecord->signed_at ? $signatureRecord->signed_at->toIso8601String() : null,
                     'signature_hash' => $signatureRecord->signature_hash
                 ],
                 'all_signatures' => $allSignatures
